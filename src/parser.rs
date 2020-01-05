@@ -100,6 +100,15 @@ pub fn header(input: &[u8]) -> IResult<&[u8], Header> {
         Some(ym2151_clock)
     };
 
+    // VGM 1.50 additions:
+    let (input, data_offset) = take_u32(input)?;
+    // For versions prior to 1.50, it should be 0 and the VGM data must start at offset 0x40.
+    let data_offset = if version < 0x00000150 {
+        0x40
+    } else {
+        data_offset
+    };
+
     Ok((
         input,
         Header {
@@ -114,6 +123,7 @@ pub fn header(input: &[u8]) -> IResult<&[u8], Header> {
             rate: rate,
             ym2612_clock: ym2612_clock,
             ym2151_clock: ym2151_clock,
+            data_offset: data_offset,
         },
     ))
 }

@@ -137,6 +137,14 @@ pub struct Header {
     /// of the YM2151.
     #[debug(with = "option_u32_hex_fmt")]
     pub ym2151_clock: Option<u32>,
+
+    /// VGM data offset
+    ///
+    /// Relative offset to VGM data stream.
+    ///
+    /// If the VGM data starts at absolute offset 0x40, this will contain value 0x0000000C.
+    #[debug(with = "u32_hex_fmt")]
+    pub data_offset: u32,
 }
 
 fn u32_hex_fmt<T: fmt::Debug + fmt::LowerHex>(n: &T, f: &mut fmt::Formatter) -> fmt::Result {
