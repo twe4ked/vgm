@@ -76,14 +76,12 @@ pub fn header(input: &[u8]) -> IResult<&[u8], Header> {
     let sn76489 = if sn76489_clock == 0 {
         None
     } else {
-        Some(SN76489 {
-            clock: sn76489_clock,
-            feedback: sn76489_feedback,
-            shift_register_width: sn76489_shift_register_width,
-            flags: sn76489_flags,
-            t6w28: sn76489_clock & 0x80000000 == 1,
-            dual_chip_bit: sn76489_clock & 0x40000000 == 1,
-        })
+        Some(SN76489::new(
+            sn76489_clock,
+            sn76489_feedback,
+            sn76489_shift_register_width,
+            sn76489_flags,
+        ))
     };
 
     // VGM 1.10 additions:

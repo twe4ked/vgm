@@ -16,6 +16,24 @@ pub struct SN76489 {
     pub dual_chip_bit: bool,
 }
 
+impl SN76489 {
+    pub fn new(
+        clock: u32,
+        feedback: Option<SN76489Feedback>,
+        shift_register_width: Option<SN76489ShiftRegisterWidth>,
+        flags: Option<SN76489Flags>,
+    ) -> Self {
+        Self {
+            clock,
+            feedback,
+            shift_register_width,
+            flags,
+            t6w28: clock & 0x80000000 != 0,
+            dual_chip_bit: clock & 0x40000000 != 0,
+        }
+    }
+}
+
 bitflags! {
     /// The white noise feedback pattern for the SN76489 PSG.
     ///
@@ -159,5 +177,33 @@ fn option_u32_hex_fmt<T: fmt::Debug + fmt::LowerHex>(
         u32_hex_fmt(n, f)
     } else {
         write!(f, "None")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sn76489_new() {
+        fn new(clock: u32) -> SN76489 {
+            let feedback = Some(SN76489Feedback::from_bits_truncate(0));
+            let shift_register_width = Some(SN76489ShiftRegisterWidth::from_bits_truncate(0));
+            let flags = Some(SN76489Flags::from_bits_truncate(0));
+
+            SN76489::new(clock, feedback, shift_register_width, flags)
+        }
+
+        let clock = 0x80000000 | 42;
+        assert!(new(clock).t6w28);
+        assert!(!new(clock).dual_chip_bit);
+
+        let clock = 0x40000000 | 42;
+        assert!(!new(clock).t6w28);
+        assert!(new(clock).dual_chip_bit);
+
+        let clock = 0x40000000 | 0x80000000 | 42;
+        assert!(new(clock).t6w28);
+        assert!(new(clock).dual_chip_bit);
     }
 }
