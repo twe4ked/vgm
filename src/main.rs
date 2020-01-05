@@ -1,15 +1,7 @@
-mod header;
-mod parser;
-
-#[macro_use]
-extern crate custom_debug_derive;
-
-#[macro_use]
-extern crate bitflags;
-
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
+use vgm::parser;
 
 fn main() {
     let args: Vec<_> = std::env::args().collect();
