@@ -4,9 +4,6 @@ use std::fmt;
 pub struct SN76489 {
     /// Input clock rate in Hz for the SN76489 PSG chip. A typical value is 3579545.
     /// It should be None if there is no PSG chip used.
-    ///
-    /// TODO: Note: Bit 31 (0x80000000) is used on combination with the dual-chip-bit to indicate
-    /// that this is a T6W28. (PSG variant used in Neo Geo Pocket)
     #[debug(with = "u32_hex_fmt")]
     pub clock: u32,
     pub feedback: Option<SN76489Feedback>,
@@ -28,6 +25,8 @@ impl SN76489 {
             feedback,
             shift_register_width,
             flags,
+            /// NOTE: Bit 31 (0x80000000) is used on combination with the dual-chip-bit
+            /// (0x40000000) to indicate that this is a T6W28. (PSG variant used in Neo Geo Pocket)
             t6w28: clock & 0x80000000 != 0,
             dual_chip_bit: clock & 0x40000000 != 0,
         }
