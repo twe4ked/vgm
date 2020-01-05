@@ -86,6 +86,20 @@ pub fn header(input: &[u8]) -> IResult<&[u8], Header> {
         })
     };
 
+    // VGM 1.10 additions:
+    let (input, ym2612_clock) = take_u32(input)?;
+    let ym2612_clock = if version < 0x00000110 {
+        None
+    } else {
+        Some(ym2612_clock)
+    };
+    let (input, ym2151_clock) = take_u32(input)?;
+    let ym2151_clock = if version < 0x00000110 {
+        None
+    } else {
+        Some(ym2151_clock)
+    };
+
     Ok((
         input,
         Header {
@@ -98,6 +112,8 @@ pub fn header(input: &[u8]) -> IResult<&[u8], Header> {
             loop_offset: loop_offset,
             loop_samples: loop_samples,
             rate: rate,
+            ym2612_clock: ym2612_clock,
+            ym2151_clock: ym2151_clock,
         },
     ))
 }

@@ -119,6 +119,24 @@ pub struct Header {
     /// VGM 1.00 files will have a value of 0.
     #[debug(with = "option_u32_hex_fmt")]
     pub rate: Option<u32>,
+
+    /// Input clock rate in Hz for the YM2612 chip. A typical value is 7670454.
+    ///
+    /// It should be 0 if there us no YM2612 chip used.
+    ///
+    /// For version 1.01 and earlier files, the YM2413 clock rate should be used for the clock rate
+    /// of the YM2612.
+    #[debug(with = "option_u32_hex_fmt")]
+    pub ym2612_clock: Option<u32>,
+
+    /// Input clock rate in Hz for the YM2151 chip. A typical value is 3579545.
+    ///
+    /// It should be 0 if there us no YM2151 chip used.
+    ///
+    /// For version 1.01 and earlier files, the YM2413 clock rate should be used for the clock rate
+    /// of the YM2151.
+    #[debug(with = "option_u32_hex_fmt")]
+    pub ym2151_clock: Option<u32>,
 }
 
 fn u32_hex_fmt<T: fmt::Debug + fmt::LowerHex>(n: &T, f: &mut fmt::Formatter) -> fmt::Result {
