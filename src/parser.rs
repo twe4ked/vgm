@@ -100,12 +100,15 @@ pub fn header(input: &[u8]) -> IResult<&[u8], Header> {
 
     // VGM 1.50 additions:
     let (input, data_offset) = take_u32(input)?;
-    // For versions prior to 1.50, it should be 0 and the VGM data must start at offset 0x40.
-    let data_offset = if version < 0x00000150 {
-        0x40
+    // If the VGM data starts at absolute offset 0x40, this will contain value 0x0000000C. For
+    // versions prior to 1.50, it should be 0 and the VGM data must start at offset 0x40.
+    let mut data_offset = if version < 0x00000150 {
+        0x0000000c
     } else {
         data_offset
     };
+    // Add our current position in the header. If we have 0x0000000c + 0x00000034 we'll get 0x40.
+    data_offset += 0x00000034;
 
     Ok((
         input,
