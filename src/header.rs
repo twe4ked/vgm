@@ -162,6 +162,18 @@ pub struct Header {
     /// If the VGM data starts at absolute offset 0x40, this will contain value 0x0000000C.
     #[debug(with = "u32_hex_fmt")]
     pub data_offset: u32,
+
+    /// Input clock rate in Hz for the Sega PCM chip. A typical value is 4000000.
+    ///
+    /// It should be 0 if there is no Sega PCM chip used.
+    #[debug(with = "option_u32_hex_fmt")]
+    pub sega_pcm_clock: Option<u32>,
+
+    /// The interface register for the Sega PCM chip.
+    ///
+    /// It should be 0 if there is no Sega PCM chip used.
+    #[debug(with = "option_u32_hex_fmt")]
+    pub spcm_interface: Option<u32>,
 }
 
 fn u32_hex_fmt<T: fmt::Debug + fmt::LowerHex>(n: &T, f: &mut fmt::Formatter) -> fmt::Result {

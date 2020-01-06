@@ -117,6 +117,28 @@ pub fn header(input: &[u8]) -> IResult<Span, Header> {
     // Add our current position in the header. If we have 0x0000000c + 0x00000034 we'll get 0x40.
     data_offset += current_position as u32; // _ + 0x00000034
 
+    // From here on we might be reading non-header data.
+    //
+    // All header sizes are valid for all versions from 1.50 on, as long as header has at least 64
+    // bytes. If the VGM data starts at an offset that is lower than 0x100, all overlapping header
+    // bytes have to be handled as they were zero.
+    //
+    // TODO: Implement overlap check using input.offset.
+
+    // VGM 1.51 additions:
+    let (input, sega_pcm_clock) = take_u32(input)?;
+    let sega_pcm_clock = if version < 0x00000151 {
+        None
+    } else {
+        Some(sega_pcm_clock)
+    };
+    let (input, spcm_interface) = take_u32(input)?;
+    let spcm_interface = if version < 0x00000151 {
+        None
+    } else {
+        Some(spcm_interface)
+    };
+
     Ok((
         input,
         Header {
@@ -132,6 +154,8 @@ pub fn header(input: &[u8]) -> IResult<Span, Header> {
             ym2612_clock,
             ym2151_clock,
             data_offset,
+            sega_pcm_clock,
+            spcm_interface,
         },
     ))
 }
