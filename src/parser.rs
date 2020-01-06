@@ -2,25 +2,28 @@ use crate::header::{Header, SN76489Feedback, SN76489Flags, SN76489ShiftRegisterW
 use byteorder::{ByteOrder, LittleEndian};
 use nom::bytes::complete::{tag, take};
 use nom::IResult;
+use nom_locate::LocatedSpan;
 
-fn take_u8(input: &[u8]) -> IResult<&[u8], u8> {
+type Span<'a> = LocatedSpan<&'a [u8]>;
+
+fn take_u8(input: Span) -> IResult<Span, u8> {
     let (input, output) = take(1u8)(input)?;
-    Ok((input, output[0]))
+    Ok((input, output.fragment[0]))
 }
 
-fn take_u16(input: &[u8]) -> IResult<&[u8], u16> {
+fn take_u16(input: Span) -> IResult<Span, u16> {
     let (input, output) = take(2u8)(input)?;
-    Ok((input, LittleEndian::read_u16(output)))
+    Ok((input, LittleEndian::read_u16(output.fragment)))
 }
 
-fn take_u32(input: &[u8]) -> IResult<&[u8], u32> {
+fn take_u32(input: Span) -> IResult<Span, u32> {
     let (input, output) = take(4u8)(input)?;
-    Ok((input, LittleEndian::read_u32(output)))
+    Ok((input, LittleEndian::read_u32(output.fragment)))
 }
 
-fn take_option_u32(input: &[u8]) -> IResult<&[u8], Option<u32>> {
+fn take_option_u32(input: Span) -> IResult<Span, Option<u32>> {
     let (input, output) = take(4u8)(input)?;
-    let output = LittleEndian::read_u32(output);
+    let output = LittleEndian::read_u32(output.fragment);
     if output == 0 {
         Ok((input, None))
     } else {
@@ -29,7 +32,9 @@ fn take_option_u32(input: &[u8]) -> IResult<&[u8], Option<u32>> {
 }
 
 // https://vgmrips.net/wiki/VGM_Specification
-pub fn header(input: &[u8]) -> IResult<&[u8], Header> {
+pub fn header(input: &[u8]) -> IResult<Span, Header> {
+    let input = Span::new(input);
+
     // File identification "Vgm " (0x56 0x67 0x6d 0x20)
     let (input, _ident) = tag("Vgm ")(input)?;
     let (input, eof_offset) = take_u32(input)?;
@@ -98,6 +103,8 @@ pub fn header(input: &[u8]) -> IResult<&[u8], Header> {
         Some(ym2151_clock)
     };
 
+    let current_position = input.offset;
+
     // VGM 1.50 additions:
     let (input, data_offset) = take_u32(input)?;
     // If the VGM data starts at absolute offset 0x40, this will contain value 0x0000000C. For
@@ -108,7 +115,7 @@ pub fn header(input: &[u8]) -> IResult<&[u8], Header> {
         data_offset
     };
     // Add our current position in the header. If we have 0x0000000c + 0x00000034 we'll get 0x40.
-    data_offset += 0x00000034;
+    data_offset += current_position as u32; // _ + 0x00000034
 
     Ok((
         input,
