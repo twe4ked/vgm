@@ -1,3 +1,51 @@
+#![allow(
+    dead_code,
+    mutable_transmutes,
+    non_camel_case_types,
+    non_snake_case,
+    non_upper_case_globals,
+    unused_assignments,
+    unused_mut
+)]
+
+pub type int16_t = libc::c_short;
+pub type int32_t = libc::c_int;
+pub type uint32_t = libc::c_uint;
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct SNG {
+    pub out: int32_t,
+    pub clk: uint32_t,
+    pub rate: uint32_t,
+    pub base_incr: uint32_t,
+    pub quality: uint32_t,
+    pub count: [uint32_t; 3],
+    pub volume: [uint32_t; 3],
+    pub freq: [uint32_t; 3],
+    pub edge: [uint32_t; 3],
+    pub mute: [uint32_t; 3],
+    pub noise_seed: uint32_t,
+    pub noise_count: uint32_t,
+    pub noise_freq: uint32_t,
+    pub noise_volume: uint32_t,
+    pub noise_mode: uint32_t,
+    pub noise_fref: uint32_t,
+    pub base_count: uint32_t,
+    pub realstep: uint32_t,
+    pub sngtime: uint32_t,
+    pub sngstep: uint32_t,
+    pub adr: uint32_t,
+    pub stereo: uint32_t,
+    pub ch_out: [int16_t; 4],
+}
+
+impl SNG {
+    pub unsafe fn new(mut clock: uint32_t, mut rate: uint32_t) -> Self {
+        *transpiled::SNG_new(clock, rate)
+    }
+}
+
 mod transpiled {
     // SN76489 emulator by Mitsutaka Okazaki 2001-2016
     //
@@ -27,38 +75,11 @@ mod transpiled {
         #[no_mangle]
         fn free(_: *mut libc::c_void);
     }
+    use super::*;
 
     pub type int16_t = libc::c_short;
     pub type int32_t = libc::c_int;
     pub type uint32_t = libc::c_uint;
-
-    #[derive(Copy, Clone)]
-    #[repr(C)]
-    pub struct SNG {
-        pub out: int32_t,
-        pub clk: uint32_t,
-        pub rate: uint32_t,
-        pub base_incr: uint32_t,
-        pub quality: uint32_t,
-        pub count: [uint32_t; 3],
-        pub volume: [uint32_t; 3],
-        pub freq: [uint32_t; 3],
-        pub edge: [uint32_t; 3],
-        pub mute: [uint32_t; 3],
-        pub noise_seed: uint32_t,
-        pub noise_count: uint32_t,
-        pub noise_freq: uint32_t,
-        pub noise_volume: uint32_t,
-        pub noise_mode: uint32_t,
-        pub noise_fref: uint32_t,
-        pub base_count: uint32_t,
-        pub realstep: uint32_t,
-        pub sngtime: uint32_t,
-        pub sngstep: uint32_t,
-        pub adr: uint32_t,
-        pub stereo: uint32_t,
-        pub ch_out: [int16_t; 4],
-    }
 
     static mut voltbl: [uint32_t; 16] = [
         0xff as libc::c_int as uint32_t,
