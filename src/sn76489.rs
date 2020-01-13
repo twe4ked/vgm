@@ -1,4 +1,17 @@
 mod transpiled {
+    // SN76489 emulator by Mitsutaka Okazaki 2001-2016
+    //
+    // 2001 08-13 : Version 1.00
+    // 2001 10-03 : Version 1.01 -- Added SNG_set_quality().
+    // 2004 05-23 : Version 1.10 -- Implemented GG stereo mode by RuRuRu
+    // 2004 06-07 : Version 1.20 -- Improved the noise emulation.
+    // 2015 12-13 : Version 1.21 -- Changed own integer types to C99 stdint.h types.
+    // 2016 09-06 : Version 1.22 -- Support per-channel output.
+    //
+    // References:
+    // SN76489 data sheet
+    // sn76489.c   -- from MAME
+    // sn76489.txt -- from http://www.smspower.org/
     #![allow(
         dead_code,
         mutable_transmutes,
@@ -14,12 +27,14 @@ mod transpiled {
         #[no_mangle]
         fn free(_: *mut libc::c_void);
     }
+
     pub type int16_t = libc::c_short;
     pub type int32_t = libc::c_int;
     pub type uint32_t = libc::c_uint;
+
     #[derive(Copy, Clone)]
     #[repr(C)]
-    pub struct __SNG {
+    pub struct SNG {
         pub out: int32_t,
         pub clk: uint32_t,
         pub rate: uint32_t,
@@ -44,25 +59,7 @@ mod transpiled {
         pub stereo: uint32_t,
         pub ch_out: [int16_t; 4],
     }
-    pub type SNG = __SNG;
-    /* rate converter */
-    /* ***************************************************************************
 
-      emu76489.c -- SN76489 emulator by Mitsutaka Okazaki 2001-2016
-
-      2001 08-13 : Version 1.00
-      2001 10-03 : Version 1.01 -- Added SNG_set_quality().
-      2004 05-23 : Version 1.10 -- Implemented GG stereo mode by RuRuRu
-      2004 06-07 : Version 1.20 -- Improved the noise emulation.
-      2015 12-13 : Version 1.21 -- Changed own integer types to C99 stdint.h types.
-      2016 09-06 : Version 1.22 -- Support per-channel output.
-
-      References:
-        SN76489 data sheet
-        sn76489.c   -- from MAME
-        sn76489.txt -- from http://www.smspower.org/
-
-    *****************************************************************************/
     static mut voltbl: [uint32_t; 16] = [
         0xff as libc::c_int as uint32_t,
         0xcb as libc::c_int as uint32_t,
@@ -81,6 +78,7 @@ mod transpiled {
         0xa as libc::c_int as uint32_t,
         0 as libc::c_int as uint32_t,
     ];
+
     unsafe extern "C" fn internal_refresh(mut sng: *mut SNG) {
         if (*sng).quality != 0 {
             (*sng).base_incr = ((1 as libc::c_int) << 24 as libc::c_int) as uint32_t;
@@ -96,6 +94,7 @@ mod transpiled {
                 as uint32_t
         };
     }
+
     #[no_mangle]
     pub unsafe extern "C" fn SNG_set_rate(mut sng: *mut SNG, mut r: uint32_t) {
         (*sng).rate = if r != 0 {
@@ -105,11 +104,13 @@ mod transpiled {
         };
         internal_refresh(sng);
     }
+
     #[no_mangle]
     pub unsafe extern "C" fn SNG_set_quality(mut sng: *mut SNG, mut q: uint32_t) {
         (*sng).quality = q;
         internal_refresh(sng);
     }
+
     #[no_mangle]
     pub unsafe extern "C" fn SNG_new(mut c: uint32_t, mut r: uint32_t) -> *mut SNG {
         let mut sng: *mut SNG = 0 as *mut SNG;
@@ -126,6 +127,7 @@ mod transpiled {
         SNG_set_quality(sng, 0 as libc::c_int as uint32_t);
         return sng;
     }
+
     #[no_mangle]
     pub unsafe extern "C" fn SNG_reset(mut sng: *mut SNG) {
         let mut i: libc::c_int = 0;
@@ -153,10 +155,12 @@ mod transpiled {
         (*sng).ch_out[1 as libc::c_int as usize] = (*sng).ch_out[2 as libc::c_int as usize];
         (*sng).ch_out[0 as libc::c_int as usize] = (*sng).ch_out[1 as libc::c_int as usize];
     }
+
     #[no_mangle]
     pub unsafe extern "C" fn SNG_delete(mut sng: *mut SNG) {
         free(sng as *mut libc::c_void);
     }
+
     #[no_mangle]
     pub unsafe extern "C" fn SNG_writeIO(mut sng: *mut SNG, mut val: uint32_t) {
         if val & 0x80 as libc::c_int as libc::c_uint != 0 {
@@ -201,6 +205,7 @@ mod transpiled {
                         & 0xf as libc::c_int as libc::c_uint
         };
     }
+
     #[inline]
     unsafe extern "C" fn parity(mut val: libc::c_int) -> libc::c_int {
         val ^= val >> 8 as libc::c_int;
@@ -209,6 +214,7 @@ mod transpiled {
         val ^= val >> 1 as libc::c_int;
         return val & 1 as libc::c_int;
     }
+
     #[inline]
     unsafe extern "C" fn update_output(mut sng: *mut SNG) {
         let mut i: libc::c_int = 0;
@@ -278,6 +284,7 @@ mod transpiled {
             i += 1
         }
     }
+
     #[inline]
     unsafe extern "C" fn mix_output(mut sng: *mut SNG) -> int16_t {
         (*sng).out = (*sng).ch_out[0 as libc::c_int as usize] as libc::c_int
@@ -286,6 +293,7 @@ mod transpiled {
             + (*sng).ch_out[3 as libc::c_int as usize] as libc::c_int;
         return (*sng).out as int16_t;
     }
+
     #[no_mangle]
     pub unsafe extern "C" fn SNG_calc(mut sng: *mut SNG) -> int16_t {
         if (*sng).quality == 0 {
@@ -301,6 +309,7 @@ mod transpiled {
         (*sng).sngtime = (*sng).sngtime.wrapping_sub((*sng).realstep);
         return mix_output(sng);
     }
+
     #[inline]
     unsafe extern "C" fn mix_output_stereo(mut sng: *mut SNG, mut out: *mut int32_t) {
         let mut i: libc::c_int = 0;
@@ -328,6 +337,7 @@ mod transpiled {
             i += 1
         }
     }
+
     #[no_mangle]
     pub unsafe extern "C" fn SNG_calc_stereo(mut sng: *mut SNG, mut out: *mut int32_t) {
         if (*sng).quality == 0 {
@@ -343,6 +353,7 @@ mod transpiled {
         (*sng).sngtime = (*sng).sngtime.wrapping_sub((*sng).realstep);
         mix_output_stereo(sng, out);
     }
+
     #[no_mangle]
     pub unsafe extern "C" fn SNG_writeGGIO(mut sng: *mut SNG, mut val: uint32_t) {
         (*sng).stereo = val;
