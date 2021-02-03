@@ -12,7 +12,7 @@ pub type int16_t = libc::c_short;
 pub type int32_t = libc::c_int;
 pub type uint32_t = libc::c_uint;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct SNG {
     pub out: int32_t,
@@ -41,8 +41,22 @@ pub struct SNG {
 }
 
 impl SNG {
-    pub unsafe fn new(mut clock: uint32_t, mut rate: uint32_t) -> Self {
-        *transpiled::SNG_new(clock, rate)
+    pub unsafe fn new(clock: uint32_t, rate: uint32_t) -> Self {
+        let sng = transpiled::SNG_new(clock, rate);
+        transpiled::SNG_reset(sng);
+        *sng
+    }
+
+    pub unsafe fn set_rate(&mut self, rate: uint32_t) {
+        transpiled::SNG_set_rate(self, rate);
+    }
+
+    pub unsafe fn write(&mut self, value: uint32_t) {
+        transpiled::SNG_writeIO(self, value)
+    }
+
+    pub unsafe fn update(&mut self) {
+        transpiled::SNG_calc(self);
     }
 }
 
@@ -379,4 +393,47 @@ mod transpiled {
     pub unsafe extern "C" fn SNG_writeGGIO(mut sng: *mut SNG, mut val: uint32_t) {
         (*sng).stereo = val;
     }
+}
+
+pub fn play(buffer: &[u8]) {
+    let mut i = 0;
+    let mut chip = unsafe { SNG::new(3579545, 0) };
+    unsafe { chip.set_rate(0) };
+    dbg!(chip);
+
+    loop {
+        match buffer[i] {
+            0x50 => {
+                // Write value dd.
+                unsafe {
+                    chip.write(buffer[i + 1] as u32);
+                    chip.update();
+                }
+                dbg!(chip.out);
+                i += 1;
+            }
+            0x61 => {
+                // Wait n samples, n can range from 0 to 65535 (approx 1.49 seconds). Longer
+                // pauses than this are represented by multiple wait commands.
+                // println!("0x61 {:#04x} {:#04x}", buffer[i + 1], buffer[i + 2]);
+                i += 2;
+            }
+            0x62 => {
+                // Wait 735 samples (60th of a second), a shortcut for 0x61 0xdf 0x02.
+            }
+            0x70..=0x7f => {
+                // Wait n+1 samples, n can range from 0 to 15.
+                // println!("0x7x {:#04x}", buffer[i] & 0x0f);
+            }
+            0x66 => {
+                // End of sound data.
+                println!("end");
+                // break;
+            }
+            _ => unimplemented!("{:#04x}", buffer[i]),
+        }
+        i += 1;
+    }
+
+    dbg!(&buffer[i..].len());
 }
